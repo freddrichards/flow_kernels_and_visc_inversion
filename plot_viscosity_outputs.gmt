@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# gmt script to plot the inverted viscosity profiles at each iteration
+
+source ~/.bashrc
+
+orig_visc="INPUT/visc_input_3_layer"
+
+
+mkdir -p visc_inv_plots
+
+
+# make a file of layer depths
+
+n_layers="130"
+
+depth_inc=$(echo 3000 | awk '{print $1/('$n_layers'-1)}')
+
+seq 0 $depth_inc 3000 > depths.temp
+
+
+
+
+plot_iteration() {
+
+psfile="visc_inv_plots/visc_${iter}.ps"
+
+rgn="-R1/100000/0/3000"
+proj="-JX5l/-10"
+
+gmt psbasemap $rgn $proj -Ba0 -K > $psfile
+
+for i in $(seq 1 1 $iter); do
+
+  visc="INPUT/visc_edit_${i}_iter"
+
+  paste $visc depths.temp | gmt psxy $rgn $proj -W1p,170 -O -K >> $psfile
+  
+done
+
+paste $orig_visc depths.temp | gmt psxy $rgn $proj -W3p,0 -O -K >> $psfile
+
+current_visc="INPUT/visc_edit_${iter}_iter"
+
+paste $current_visc depths.temp | gmt psxy $rgn $proj -W1p,255/0/0 -O -K >> $psfile
+
+echo "48 98 Iteration $iter" | gmt pstext -R0/50/0/100 -JX5/-10 -F+f8p,1+jBR -O -K >> $psfile
+
+gmt psbasemap $rgn $proj -Bxa1pf3+l"Viscosity, (Pa s)" -Bya1000f500+l"Depth (km)" -BWesN -O >> $psfile
+
+ps2jpg $psfile
+
+}
+
+for iter in $(seq 1 1 212); do
+
+#iter=3
+
+  plot_iteration
+  
+done
+
+eog $jpgfile &
